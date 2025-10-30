@@ -194,7 +194,7 @@
         }
 
         // Remove Bearer prefix if it exists
-        if (token.toLowerCase().startswith("bearer ")) {
+        if (token.toLowerCase().startsWith("bearer ")) {
           token = token.replace(/^bearer\s+/i, "");
         }
 
