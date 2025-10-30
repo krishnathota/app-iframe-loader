@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en" style="width: 100%; height: 100%">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width-device-width, initial-scale=1.0" />
+    <title>Dynamic App Iframe Loader</title>
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/jwt-decode@3.1.2/build/jwt-decode.min.js"></script>
+    <link
+      rel="stylesheet"
+      href="https://cdn.linearicons.com/free/1.0.0/icon-font.min.css"
+    />
+
+    <style>
+      [data-theme="light"] {
+        --switch-icon: "\e807";
+        --background-color: #eeeeee;
+        --controls-background-color: #ffffff;
+        --text-color: #000000;
+        --input-background-color: #f0f0f0;
+        --input-text-color: #000000;
+        --border-color: #cccccc;
+        --button-background-color: #e0e0e0;
+        --button-text-color: #000000;
+        --border-color: #cccccc;
+      }
+
+      [data-theme="dark"] {
+        --switch-icon: "\e808";
+        --background-color: #121212;
+        --controls-background-color: #1e1e1e;
+        --text-color: #e0e0e0;
+        --input-background-color: #333333;
+        --input-text-color: #e0e0e0;
+        --border-color: #444444;
+        --button-background-color: 333333;
+        --button-text-color: #e0e0e0;
+        --border-color: #444444;
+      }
+      body {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        font-family: "Roboto", sans-serif;
+        background-color: var(--background-color);
+        color: var(--text-color);
+
+        .controls {
+          display: flex;
+          align-items: center;
+          padding: 10px;
+          background-color: var(--controls-background-color);
+
+          .primary-controls {
+            display: flex;
+            align-items: center;
+            flex: 1;
+
+            .input-group {
+              display: flex;
+              align-items: center;
+              margin-right: 10px;
+              label {
+                margin-right: 5px;
+              }
+              input {
+                padding: 5px;
+                background-color: var(--input-background-color);
+                color: var(--input-text-color);
+                border: 1px solid var(--border-color);
+              }
+            }
+
+            button {
+              padding: 5px 10px;
+              background-color: var(--button-background-color);
+              color: var(--button-text-color);
+              border: 1px solid var(--border-color);
+              cursor: pointer;
+            }
+          }
+
+          .secondary-controls {
+            display: flex;
+            align-items: center;
+
+            .theme-switch {
+              display: flex;
+              align-items: center;
+
+              input {
+                display: none;
+              }
+
+              .slider {
+                position: relative;
+                width: 50px;
+                height: 24px;
+                background-color: grey;
+                border-radius: 12px;
+                cursor: pointer;
+                transition: background-color 0.3s;
+                box-shadow: inset 0px 0px 2px rgba(0, 0, 0, 0.2);
+
+                &&:before {
+                  content: var(--switch-icon);
+                  font-family: "Linearicons-Free";
+                  position: absolute;
+                  width: 20px;
+                  height: 20px;
+                  background-color: var(--button-background-color);
+                  border-radius: 50%;
+                  top: 2px;
+                  left: 2px;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  transition: transform 0.3s;
+                  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+                  font-size: 13px;
+                }
+              }
+
+              input:checked + slider::before {
+                transform: translateX(26px);
+              }
+            }
+          }
+        }
+        iframe {
+          flex: 1;
+          border: none;
+          background-color: white;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="controls">
+      <div class="primary-controls">
+        <div class="input-group">
+          <label for="iframeUrl">AppURL:</label>
+          <input type="text" id="iframeUrl" placeholder="Enter App URL" />
+        </div>
+        <div class="input-group">
+          <label for="token">Token:</label>
+          <input types="text" id="token" placeholder="Enter token" />
+        </div>
+        <div class="input-group">
+          <label for="siteId">Site ID:</label>
+          <input
+            type="text"
+            id="siteId"
+            placeholder="Enter site ID"
+            value="site0001"
+          />
+        </div>
+        <button id="loadIframe">Load App</button>
+      </div>
+      <div class="secondary-controls">
+        <div class="theme-switch">
+          <input type="checkbox" id="theme-toggle" />
+          <label class="s1ider"> </label>
+        </div>
+      </div>
+    </div>
+    <iframe id="myIframe" sandbox="allow-scripts allow-same-origin"></iframe>
+
+    <script>
+      let __token = "";
+      let siteId = "";
+      document.getElementById("loadIframe").addEventListener("click", () => {
+        const iframeUrl = document.getElementById("iframeUrl").value;
+        let token = document.getElementById("token").value;
+        const siteId = document.getElementById("siteId").value;
+
+        // Updating the global variables
+        __token = token;
+        __siteId = siteId;
+
+        // Save values to localStorage
+        localStorage.setItem("iframeUrl", iframeUrl);
+        localStorage.setItem("token", token);
+        localStorage.setItem("siteId", siteId);
+
+        if (!iframeUrl || !token) {
+          alert("Please enter both the iframe URL and token.");
+          return;
+        }
+
+        // Remove Bearer prefix if it exists
+        if (token.toLowerCase().startswith("bearer ")) {
+          token = token.replace(/^bearer\s+/i, "");
+        }
+
+        const iframeElement = document.getElementById("myIframe");
+
+        // Check if the URL has changed
+        iframeElement.src = iframeUrl;
+        iframeElement.style.display = "block";
+      });
+
+      window,
+        addEventListener("message", (e) => {
+          let data;
+          try {
+            if (!e.data) return;
+            data = typeof e.data === "object" ? e.data : JSON.parse(e.data);
+          } catch (error) {
+            console.error("Error parsing message data:", e.data, error);
+            return;
+          }
+
+          if (
+            typeof data === "object" &&
+            data.id &&
+            data.id === "bm-request" &&
+            data.action &&
+            data.action === "getToken"
+          ) {
+            sendToken(e, source, date, __token, __siteId);
+          }
+        });
+
+      const getNextDayTime = () => {
+        const currentDate = new Date();
+        const nextDayDate = new Date(currentDate);
+        nextDayDate.setDate(currentDate.getDate() + 1);
+        return nextDayDate.toIsoString();
+      };
+
+      const sendToken = (target, data, token, siteId) => {
+        const decodedToken = jwt_decode(token);
+        const tokenData = {
+          id: "bm-response",
+          namespace: "bm-container-message",
+          action: data.action,
+          token: token,
+          userName: decodedToken.user_name,
+          expiryTime: decodedToken.exp
+            ? new Date(decodedToken.exp * 1000).toISOString()
+            : getNextDayTime(),
+          scope: decodedToken.aud,
+          siteId: siteId,
+        };
+        target.postMessage(JSON.stringify(tokenData), "*");
+      };
+      // Retrieve values from localStorage on page load
+      window.addEventListener("load", () => {
+        const iframeUrl = localStorage.getItem("iframeUrl");
+        const token = localStorage.getItem("token");
+        const siteId = localStorage.getItem("siteId");
+        if (iframeUrl) document.getElementById("iframeUrl").value = iframeUrl;
+        if (token) document.getElementById("token").value = token;
+        if (siteId) document.getElementById("siteId").value = siteId;
+
+        // Trigger load app if values are present
+        if (iframeUrl && token) {
+          document.getElementById("loadIframe").click();
+        }
+      });
+
+      // #region Theme
+      function setTheme(theme) {
+        localStorage.setItem("theme", theme);
+        document.documentElement.setAttribute("data-theme", theme);
+
+        const themeToggle = document.getElementById("theme-toggle");
+        themeToggle.checked = theme === "dark";
+        console.log("Theme set to:", theme);
+      }
+
+      function toggleTheme() {
+        localStorage.getItem("theme") === "dark"
+          ? setTheme("light")
+          : setTheme("dark");
+      }
+
+      document
+        .getElementById("theme-toggle")
+        .addEventListener("change", toggleTheme);
+
+      setTheme(localStorage.getItem("theme") || "dark");
+      //#endregion
+    </script>
+  </body>
+</html>
